@@ -4,55 +4,96 @@ import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import Checkbox from '@mui/material/Checkbox';
-import listStyle from './listStyle.module.sass'
-import { Box, Button } from '@mui/material';
-import { dataType } from '../zustand/useTodoStore';
+import listStyle from '../sass/listStyle.module.sass';
+import { Box, Button, TextField, Typography } from '@mui/material';
 import { useStoreTodo } from '../zustand/useTodoStore';
+import { dataType } from '../types/typeHome';
+
+export let ListContext = React.createContext<any>({});
 
 export const ListItems = () => {
-    const [list, setList] = React.useState<dataType[]>([]);
+    const {
+        todoPergamena,
+        listSize,
+        listItem,
+        listText,
+        listItemProduct,
+        listItemPrice,
+        listDiv,
+        btnDiv,
+        btn,
+        btnAdd,
+        totalBox,
+        spanTot
+    } = listStyle;
     const [array, setArray] = useLocalStorage<dataType[]>('todoList', []);
-    const { listSize, listItem, listDiv, btnDiv, btn } = listStyle;
-    const [checked, setChecked] = React.useState([1]);
-
-    const [ID, setID] = React.useState<number>(1);
-
-
+    const [isTrue, setIsTrue] = React.useState<boolean>(false);
+    const [ID, setID] = React.useState<string>('');
+    const [total, setTotal] = React.useState<number[]>([]);
     const listStore = useStoreTodo((state) => state.todos);
-    const addListStore = useStoreTodo((state) => state.addTodos);
-    const removeListStore = useStoreTodo((state) => state.removeTodos);
 
-    const handleToggle = (value: number) => () => {
-        const currentIndex = checked.indexOf(value);
-        const newChecked = [...checked];
-        console.log(checked);
+    const [totale, setTotale] = React.useState<string>("");
 
-        if (currentIndex === -1) {
-            newChecked.push(value);
-            console.log(value);
+    const addListTodo = useStoreTodo((state) => state.addTodos);
+    const UpdateListStore = useStoreTodo((state) => state.updateTodo);
+    const removeListTodo = useStoreTodo((state) => state.removeTodos);
+
+
+    const [checked, setChecked] = React.useState<{ id: string, check: boolean }>({
+        id: "",
+        check: false,
+    });
+
+    const handleChecked = (listStore: dataType) => (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (listStore) {
+            if (listStore.id === event.target.name) {
+                setChecked(prev => ({
+                    ...prev,
+                    id: listStore.id,
+                    check: event.target.checked,
+                }
+                ));
+                UpdateListStore({
+                    ...listStore,
+                    checked: event.target.checked,
+                })
+            }
         } else {
-            newChecked.splice(currentIndex, 1);
+            return setChecked({
+                id: "",
+                check: false,
+            });
         }
-
-        setChecked(newChecked);
     };
 
     const AddItem = () => {
         let addProduct = prompt("Aggiungi un nuovo alimento");
         let addPrice = prompt("Conosci anche il suo prezzo?");
-        
-        if (addProduct !== null) {
-            addListStore({ id: ID, product: addProduct, price: addPrice ? addPrice : "0" });
-            setID(ID + 1);
-        } else {
-            return null;
+        console.log("Prodotto aggiunto", addProduct);
+        console.log("Prezzo aggiunto", addPrice);
+
+        if (addProduct !== null && listStore !== null) {
+            const newProduct: dataType = {
+                id: addProduct,
+                product: addProduct,
+                price: addPrice || "0",
+                checked: checked.check
+            }
+            const hasDuplicate = listStore.some((list) => {
+                return list.id === newProduct.id;
+            });
+            if (hasDuplicate === false) {
+                addListTodo(newProduct);
+            } else {
+                return;
+            }
         }
     }
 
-    const RemoveList = (id: number) => {
+    const RemoveList = (id: string) => {
         listStore.map((el) => {
             if (id === el.id) {
-                removeListStore(el.id);
+                removeListTodo(el.id);
             }
             return;
         });
@@ -60,57 +101,72 @@ export const ListItems = () => {
 
     React.useEffect(() => {
         function listenChanges() {
-            setArray(listStore);
-            console.log(listStore);
+            setArray((prevList) => [...prevList, ...listStore]);
         }
+        totalPrice(listStore, setTotale);
+        console.log("Qui", checked);
+        console.log("Vediamo il", listStore);
         listenChanges();
-    }, [listStore, ID]);
+    }, [listStore, ID, total, checked, totale, isTrue]);
 
     return (
-        <Box component={'div'} className={listDiv}>
-
-            <List dense sx={{
-                position: 'relative',
-                display: 'flex',
-                flexDirection: 'column',
-                border: '4px dashed red',
-                bgcolor: 'background.paper',
-                overflowY: 'auto'
-            }}
-                className={listSize}>
-                <ListItem>
-                    <ListItemText primary={'Prodotti'} />
-                    <ListItemText primary={'Price'} />
-                    <ListItemText primary={'Check'} sx={{ width: '42px', flexGrow: 0 }} />
-                </ListItem>
-                {listStore.map((el, index: number) => {
-                    const labelId = `checkbox-list-secondary-label-${el.id}`;
-                    return (
-                        <ListItem
-                            key={el.id}
-                            secondaryAction={
-                                <Checkbox
-                                    edge="end"
-                                    onChange={handleToggle(index)}
-                                    checked={checked.includes(index)}
-                                    inputProps={{ 'aria-labelledby': labelId }}
-                                />
-                            }
-                            disablePadding
-                        >
-                            <ListItemButton>
-                                <ListItemText className={listItem} id={labelId} primary={`Prodotto: ${el.product}`} />
-                                <ListItemText className={listItem} id={labelId} primary={`prezzo: €${el.price}`} />
-                                <Button type="button" variant={'text'} className={btn} onClick={() => {RemoveList(el.id)}}>{'X'}</Button>
-                            </ListItemButton>
+        <ListContext.Provider value={{
+            isTrue, setIsTrue,
+        }}>
+            <Box component={'div'} className={todoPergamena}>
+                <Box component={'div'} className={listDiv}>
+                    <List dense sx={{
+                        position: 'relative',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        bgcolor: 'transparent',
+                        overflowY: 'auto'
+                    }}
+                        className={listSize}>
+                        <ListItem>
+                            <ListItemText className={listText} primary={'Prodotto'} />
+                            <ListItemText className={listText} primary={'Price'} />
+                            <ListItemText className={listText} primary={''} />
+                            <ListItemText className={listText} primary={'Check'} sx={{ width: '42px', flexGrow: 0 }} />
                         </ListItem>
-                    );
-                })}
-            </List>
-            <Box component={'div'} className={btnDiv}>
-                <Button type="button" variant={'contained'} className={btn} onClick={AddItem}>{'Aggiungi'}</Button>
+                        {listStore.map((el) => {
+                            const labelId = `checkbox-list-secondary-label-${el.id}`;
+                            const ElPrice = parseFloat(el.price).toFixed(2).toString();
+                            return (
+                                <ListItem
+                                    className={listItem}
+                                    key={el.id}
+                                    secondaryAction={
+                                        <Checkbox
+                                            name={el.id}
+                                            edge="end"
+                                            onChange={handleChecked(el)}
+                                            checked={checked.id === el.id ? checked.check : false}
+                                            inputProps={{ 'aria-labelledby': labelId }}
+                                        />
+                                    }
+                                    disablePadding
+                                >
+                                    <ListItemButton>
+                                        <ListItemText className={listItemProduct} id={labelId} primary={`${el.product}`} />
+                                        <ListItemText className={listItemPrice} id={labelId} primary={`€${ElPrice}`} />
+                                        <Button type="button" variant={'text'} className={btn} onClick={() => { RemoveList(el.id) }}>{'X'}</Button>
+                                    </ListItemButton>
+                                </ListItem>
+                            );
+                        })}
+                        <Box component={'div'} className={btnDiv}>
+                            <Button type="button" variant={'contained'} className={btnAdd} onClick={AddItem}>{'Aggiungi'}</Button>
+                        </Box>
+                        <Box component={'div'} className={totalBox}>
+                            <Typography variant={'body1'} className={spanTot}>{totale}</Typography>
+                        </Box>
+                    </List>
+
+                </Box>
             </Box>
-        </Box>
+        </ListContext.Provider>
+
     );
 }
 
@@ -124,11 +180,33 @@ function useLocalStorage<T>(key: string, initialValue: T) {
         }
     });
 
-    const setValue = (value: T) => {
+    const setValue: React.Dispatch<React.SetStateAction<T>> = (value) => {
         const valueToStore = value instanceof Function ? // controlla se il valore è istanza di funzione
             value(storedValue) : value;
         setStoredValue(valueToStore);
         window.localStorage.setItem(key, JSON.stringify(valueToStore));
     };
     return [storedValue, setValue] as const;
+}
+
+function totalPrice(array: dataType[], setTotale: (val: string) => void) {
+    let price: Array<number> = [];
+    array.map((list) => {
+        if (list.checked === true) {
+            let price1 = parseFloat(list.price).toFixed(2);
+            price.push(parseFloat(price1));
+
+        } else {
+            price.push(0);
+        }
+    });
+    const result = price.length > 0 ?
+        price.reduce((acc: number, curr: number) => {
+            return acc + curr;
+        })
+        :
+        0
+        ;
+    setTotale(result.toFixed(2));
+    return result.toString();
 }

@@ -1,22 +1,29 @@
 import { create } from 'zustand';
-
-export type dataType = {
-    id: number;
-    product: string;
-    price: string;
-}
+import { dataType } from '../types/typeHome';
 
 type TodoStore = {
     todos: dataType[];
     addTodos: (todo: dataType) => void;
-    removeTodos: (id: number) => void;
-}
+    updateTodo: (todo: dataType) => void;
+    removeTodos: (id: string) => void;
+};
 
 // Definisco il mio store con Zustand
 export const useStoreTodo = create<TodoStore>((set) => ({
     todos: [],
-    addTodos: (todo) => set((state) => ({ todos: [...state.todos, todo]})),
-    removeTodos: (id: number) => set((state) => ({ 
+    addTodos: (todo) => set((state) => ({
+        todos: [...state.todos, todo]
+    })),
+    updateTodo: (updatedTodo) => set(({ todos }) => ({
+        todos: todos.map(
+            (todo) =>
+                todo.id === updatedTodo.id ?
+                    { ...todo, ...updatedTodo }
+                    :
+                    todo
+        )
+    })),
+    removeTodos: (id: string) => set((state) => ({
         todos: state.todos.filter((todo) => todo.id !== id),
     })),
 }));
