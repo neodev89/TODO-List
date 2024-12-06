@@ -39,29 +39,25 @@ export const ListItems = () => {
     const removeListTodo = useStoreTodo((state) => state.removeTodos);
 
 
-    const [checked, setChecked] = React.useState<{ id: string, check: boolean }>({
-        id: "",
-        check: false,
-    });
+    const [checked, setChecked] = React.useState<Record<string, boolean>>({});
 
     const handleChecked = (listStore: dataType) => (event: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, checked } = event.target;
         if (listStore) {
-            if (listStore.id === event.target.name) {
+            if (listStore.id === name) {
                 setChecked(prev => ({
                     ...prev,
-                    id: listStore.id,
-                    check: event.target.checked,
+                    [name]: checked,
                 }
                 ));
                 UpdateListStore({
                     ...listStore,
-                    checked: event.target.checked,
+                    checked: checked,
                 })
             }
         } else {
             return setChecked({
-                id: "",
-                check: false,
+                [name]: checked
             });
         }
     };
@@ -141,7 +137,7 @@ export const ListItems = () => {
                                             name={el.id}
                                             edge="end"
                                             onChange={handleChecked(el)}
-                                            checked={checked.id === el.id ? checked.check : false}
+                                            checked={checked.checked}
                                             inputProps={{ 'aria-labelledby': labelId }}
                                         />
                                     }
@@ -159,7 +155,7 @@ export const ListItems = () => {
                             <Button type="button" variant={'contained'} className={btnAdd} onClick={AddItem}>{'Aggiungi'}</Button>
                         </Box>
                         <Box component={'div'} className={totalBox}>
-                            <Typography variant={'body1'} className={spanTot}>{totale}</Typography>
+                            <Typography variant={'body1'} className={spanTot}>{`€ ${totale}`}</Typography>
                         </Box>
                     </List>
 
